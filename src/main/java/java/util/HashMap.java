@@ -1857,7 +1857,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                     root.next = first;
                     root.prev = null;
                 }
-                assert checkInvariants(root);
+                assert checkInvariants(root);//assert后面的表达式为false时会抛出错误
             }
         }
 
@@ -1957,13 +1957,13 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                                 xp.left = x;//x的hash值小于等于p的hash值时尝试插入到左子树
                             else
                                 xp.right = x;//x的hash值大于p的hash值时尝试插入到右子树
-                            root = balanceInsertion(root, x);//待补充
+                            root = balanceInsertion(root, x);//插入x
                             break;
                         }
                     }
                 }
             }
-            moveRootToFront(tab, root);//检查当前的root是否是真正的根结点，不是要进行移动
+            moveRootToFront(tab, root);//确保当前的root是直接落在table数组上
         }
 
         /**
@@ -2027,7 +2027,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                     x.parent = x.prev = xp;
                     if (xpn != null)
                         ((TreeNode<K,V>)xpn).prev = x;
-                    moveRootToFront(tab, balanceInsertion(root, x));//检查平衡后root是否是第一个结点
+                    moveRootToFront(tab, balanceInsertion(root, x));//插入后进行红黑树的性质修复，并检查root是否是直接在table数组上
                     return null;
                 }
             }
@@ -2123,8 +2123,8 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                     pp.right = replacement;
                 p.left = p.right = p.parent = null;//移除p结点
             }
-
-            TreeNode<K,V> r = p.red ? root : balanceDeletion(root, replacement);//待补充
+            //以replacement为中心，进行红黑树性质的修复，replacement可能为s的右儿子或者p的儿子或者p自己
+            TreeNode<K,V> r = p.red ? root : balanceDeletion(root, replacement);
 
             if (replacement == p) {  //p没有儿子或者s没有儿子，直接移除p
                 TreeNode<K,V> pp = p.parent;
@@ -2203,66 +2203,72 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         /* ------------------------------------------------------------ */
         // Red-black tree methods, all adapted from CLR红黑树旋转部分直接画图吧
 
+        //左旋操作，见图中右向左，p是x，r是y
         static <K,V> TreeNode<K,V> rotateLeft(TreeNode<K,V> root,
                                               TreeNode<K,V> p) {
             TreeNode<K,V> r, pp, rl;
-            if (p != null && (r = p.right) != null) {
-                if ((rl = p.right = r.left) != null)
+            if (p != null && (r = p.right) != null) {//r是p的右儿子，也就是图中的y
+                if ((rl = p.right = r.left) != null)//r的左儿子β成为p的右儿子
                     rl.parent = p;
-                if ((pp = r.parent = p.parent) == null)
-                    (root = r).red = false;
-                else if (pp.left == p)
+                if ((pp = r.parent = p.parent) == null)//p的父亲成为r的父亲
+                    (root = r).red = false;//若p是根结点,r的颜色改黑色
+                else if (pp.left == p)//r取代p原本的位置
                     pp.left = r;
                 else
                     pp.right = r;
-                r.left = p;
+                r.left = p;//p成为r的右儿子
                 p.parent = r;
             }
             return root;
         }
 
+        //右旋操作，见图中左向右，p是y，l是x
         static <K,V> TreeNode<K,V> rotateRight(TreeNode<K,V> root,
                                                TreeNode<K,V> p) {
             TreeNode<K,V> l, pp, lr;
-            if (p != null && (l = p.left) != null) {
-                if ((lr = p.left = l.right) != null)
+            if (p != null && (l = p.left) != null) {//l是p的左儿子，即图中x
+                if ((lr = p.left = l.right) != null)//l的右儿子β成为p的左儿子
                     lr.parent = p;
-                if ((pp = l.parent = p.parent) == null)
-                    (root = l).red = false;
-                else if (pp.right == p)
+                if ((pp = l.parent = p.parent) == null)//p的父亲成为l的父亲
+                    (root = l).red = false;//若p是根结点,l的颜色改黑色
+                else if (pp.right == p)//l取代p原本的位置
                     pp.right = l;
                 else
                     pp.left = l;
-                l.right = p;
+                l.right = p;//p成为l的右儿子
                 p.parent = l;
             }
             return root;
         }
 
+        //插入操作后修复红黑树性质
         static <K,V> TreeNode<K,V> balanceInsertion(TreeNode<K,V> root,
                                                     TreeNode<K,V> x) {
-            x.red = true;
+            x.red = true;//插入的结点设为红色
             for (TreeNode<K,V> xp, xpp, xppl, xppr;;) {
                 if ((xp = x.parent) == null) {
-                    x.red = false;
+                    x.red = false;//x的父亲为null代表x是根结点，x改黑色直接结束
                     return x;
                 }
                 else if (!xp.red || (xpp = xp.parent) == null)
-                    return root;
-                if (xp == (xppl = xpp.left)) {
+                    return root;//若x的父结点为黑色或者x的父亲为根结点(实际上根应该是黑色)插入红色结点不影响红黑树性质
+                if (xp == (xppl = xpp.left)) {//若x的父亲为左儿子
                     if ((xppr = xpp.right) != null && xppr.red) {
-                        xppr.red = false;
+                    	//xppr为x的叔叔，且叔叔为红色，图中的情况1，x的叔叔和父亲改为红色，x的爷爷改为黑色，x指针上移到爷爷的位置
+                    	xppr.red = false;
                         xp.red = false;
                         xpp.red = true;
                         x = xpp;
                     }
                     else {
                         if (x == xp.right) {
-                            root = rotateLeft(root, x = xp);
+                            //情况2，x的叔叔是黑色且x是右儿子。对x上升至父亲后执行一次左旋
+                        	root = rotateLeft(root, x = xp);
                             xpp = (xp = x.parent) == null ? null : xp.parent;
                         }
                         if (xp != null) {
-                            xp.red = false;
+                            //情况3，x的叔叔是黑色且x是左儿子。x的父亲改黑色，x的爷爷改红色后对x的爷爷进行右旋
+                        	xp.red = false;
                             if (xpp != null) {
                                 xpp.red = true;
                                 root = rotateRight(root, xpp);
@@ -2270,7 +2276,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                         }
                     }
                 }
-                else {
+                else {//以下为对称的操作
                     if (xppl != null && xppl.red) {
                         xppl.red = false;
                         xp.red = false;
@@ -2294,44 +2300,49 @@ public class HashMap<K,V> extends AbstractMap<K,V>
             }
         }
 
+        //删除操作后修复红黑树性质
         static <K,V> TreeNode<K,V> balanceDeletion(TreeNode<K,V> root,
                                                    TreeNode<K,V> x) {
             for (TreeNode<K,V> xp, xpl, xpr;;)  {
                 if (x == null || x == root)
-                    return root;
+                    return root;//删除结点为空或者删除的是根结点，直接返回
                 else if ((xp = x.parent) == null) {
-                    x.red = false;
+                    x.red = false;//删除后x成为根结点，x的颜色改为黑色
                     return x;
                 }
                 else if (x.red) {
-                    x.red = false;
+                    x.red = false;//将一个红色的结点提升到删除结点的位置不会改变黑高
                     return root;
                 }
-                else if ((xpl = xp.left) == x) {
+                else if ((xpl = xp.left) == x) {//x的父亲是左儿子
                     if ((xpr = xp.right) != null && xpr.red) {
-                        xpr.red = false;
+                        //情况1，x的兄弟是红色的
+                    	xpr.red = false;
                         xp.red = true;
                         root = rotateLeft(root, xp);
                         xpr = (xp = x.parent) == null ? null : xp.right;
                     }
                     if (xpr == null)
-                        x = xp;
+                        x = xp;//若x没有兄弟，x上升到父亲的位置
                     else {
                         TreeNode<K,V> sl = xpr.left, sr = xpr.right;
                         if ((sr == null || !sr.red) &&
                             (sl == null || !sl.red)) {
+                        	//情况2，x兄弟是黑色，他的两个儿子是黑色的
                             xpr.red = true;
                             x = xp;
                         }
                         else {
                             if (sr == null || !sr.red) {
-                                if (sl != null)
+                                //情况3，x兄弟是黑色，他的右儿子是黑色，左儿子红色
+                            	if (sl != null)
                                     sl.red = false;
                                 xpr.red = true;
                                 root = rotateRight(root, xpr);
                                 xpr = (xp = x.parent) == null ?
                                     null : xp.right;
                             }
+                            //情况4
                             if (xpr != null) {
                                 xpr.red = (xp == null) ? false : xp.red;
                                 if ((sr = xpr.right) != null)
@@ -2345,7 +2356,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                         }
                     }
                 }
-                else { // symmetric
+                else { //以下为对称操作
                     if (xpl != null && xpl.red) {
                         xpl.red = false;
                         xp.red = true;
@@ -2388,26 +2399,27 @@ public class HashMap<K,V> extends AbstractMap<K,V>
 
         /**
          * Recursive invariant check
+         * 从root开始递归检查红黑树的性质，仅在检查root是否落在table上时调用
          */
         static <K,V> boolean checkInvariants(TreeNode<K,V> t) {
             TreeNode<K,V> tp = t.parent, tl = t.left, tr = t.right,
                 tb = t.prev, tn = (TreeNode<K,V>)t.next;
             if (tb != null && tb.next != t)
-                return false;
+                return false;//t的前一个结点的后续应为t
             if (tn != null && tn.prev != t)
-                return false;
+                return false;//t的后一个结点的前驱应为t
             if (tp != null && t != tp.left && t != tp.right)
-                return false;
+                return false;//t因为t父亲的左儿子或右儿子
             if (tl != null && (tl.parent != t || tl.hash > t.hash))
-                return false;
+                return false;//t的左儿子的hash值应小于t，父亲应为t
             if (tr != null && (tr.parent != t || tr.hash < t.hash))
-                return false;
+                return false;//t的右儿子的hash值应大于t，父亲应为t
             if (t.red && tl != null && tl.red && tr != null && tr.red)
-                return false;
+                return false;//t和t的儿子不能同时是红色
             if (tl != null && !checkInvariants(tl))
-                return false;
+                return false;//递归检查t的左儿子
             if (tr != null && !checkInvariants(tr))
-                return false;
+                return false;//递归检查t的右儿子
             return true;
         }
     }
