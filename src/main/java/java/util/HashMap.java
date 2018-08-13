@@ -1819,7 +1819,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         TreeNode<K,V> left;    //左儿子
         TreeNode<K,V> right;   //右儿子
         TreeNode<K,V> prev;    //前方结点
-        boolean red;
+        boolean red;//是否是红色
         TreeNode(int hash, K key, V val, Node<K,V> next) {
             super(hash, key, val, next);
         }
@@ -1914,10 +1914,10 @@ public class HashMap<K,V> extends AbstractMap<K,V>
             int d;
             if (a == null || b == null ||
                 (d = a.getClass().getName().
-                 compareTo(b.getClass().getName())) == 0)//a和b的class相同或者都是null
+                 compareTo(b.getClass().getName())) == 0)//a和b的class相同或者一方是null
                 d = (System.identityHashCode(a) <= System.identityHashCode(b) ?
                      -1 : 1);
-            return d;//a的hashcode<=b的hashcode则返回-1，否则返回1
+            return d;//a的hashcode<=b的hashcode则返回-1，否则返回1，不能比较返回0
         }
 
         /**
@@ -1927,7 +1927,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         final void treeify(Node<K,V>[] tab) {
             TreeNode<K,V> root = null;
             for (TreeNode<K,V> x = this, next; x != null; x = next) {
-                next = (TreeNode<K,V>)x.next;
+                next = (TreeNode<K,V>)x.next;//根据链表进行遍历
                 x.left = x.right = null;
                 if (root == null) {
                     x.parent = null;
@@ -1947,8 +1947,8 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                             dir = 1;
                         else if ((kc == null &&
                                   (kc = comparableClassFor(k)) == null) ||
-                                 (dir = compareComparables(kc, k, pk)) == 0)//kc为null或kc是不可比较的类或者k和p.key相等
-                            dir = tieBreakOrder(k, pk);//比较k和p.k的hash值大小，k大dir=-1，p.key大则dir=1
+                                 (dir = compareComparables(kc, k, pk)) == 0)//k是不可比较的类或者k和p.key相等，kc==null这个条件只是为了给kc初始化
+                            dir = tieBreakOrder(k, pk);//比较k和p.k的hash值大小，k大dir=-1，p.key大则dir=1，pk是父亲的hash，k是要插入结点的hash
 
                         TreeNode<K,V> xp = p;
                         if ((p = (dir <= 0) ? p.left : p.right) == null) {//要插入的位置已没有子结点，则进行插入，否则沿着要插入的子树位置继续向下遍历
@@ -1957,7 +1957,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                                 xp.left = x;//x的hash值小于等于p的hash值时尝试插入到左子树
                             else
                                 xp.right = x;//x的hash值大于p的hash值时尝试插入到右子树
-                            root = balanceInsertion(root, x);//插入x
+                            root = balanceInsertion(root, x);//插入后修复红黑树性质
                             break;
                         }
                     }
@@ -2002,9 +2002,10 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                     return p;//p.hash=h且p.key与k相等时，已存在k值对应的结点则返回
                 else if ((kc == null &&
                           (kc = comparableClassFor(k)) == null) ||
-                         (dir = compareComparables(kc, k, pk)) == 0) {//hash值相等但key值不相等，k与p.key的class相同或者都为null
+                         (dir = compareComparables(kc, k, pk)) == 0) {///k是不可比较的类或者k和p.key通过compareTo比较相等
                     if (!searched) {
-                        TreeNode<K,V> q, ch;
+                        //这部分只会在在k和p.key通过compareTo比较相等时执行一次，若未能在在左右子树中寻找到k==p.key或者k.equals(p.key)的情况则下次不会再进入
+                    	TreeNode<K,V> q, ch;
                         searched = true;
                         if (((ch = p.left) != null &&
                              (q = ch.find(h, k, kc)) != null) ||
@@ -2086,7 +2087,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                         if (s == sp.left)
                             sp.left = p;//p放到s原本的位置
                         else
-                            sp.right = p;//好像不存在这种情况
+                            sp.right = p;
                     }
                     if ((s.right = pr) != null)
                         pr.parent = s;//s放到p原本的位置
