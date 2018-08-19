@@ -252,7 +252,7 @@ public class HashSet<E>
     /**
      * Returns a shallow copy of this <tt>HashSet</tt> instance: the elements
      * themselves are not cloned.
-     * clone方法就是先复制一个空的HashSet，然后通过map.clone复制map
+     * clone方法就是先复制一个空的HashSet，然后通过map.clone复制map，但是元素本身没有复制
      *
      * @return a shallow copy of this set
      */
