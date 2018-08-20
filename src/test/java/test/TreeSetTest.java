@@ -12,6 +12,5 @@ public class TreeSetTest {
 		//System.out.println(set.remove(null));报错
 		System.out.println(set.remove("123"));//true
 		System.out.println(set.remove("123"));//false
-		set.sp
 	}
 }
