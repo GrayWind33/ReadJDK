@@ -61,7 +61,7 @@ class FileOutputStream extends OutputStream
     private final FileDescriptor fd;
 
     /**
-     * True if the file is opened for append.在文件已经打开等待扩展时为true
+     * True if the file is opened for append.文件为扩展模式在末尾添加时为true
      */
     private final boolean append;
 
@@ -170,7 +170,7 @@ class FileOutputStream extends OutputStream
      * @see        java.lang.SecurityManager#checkWrite(java.lang.String)
      */
     public FileOutputStream(File file) throws FileNotFoundException {
-        this(file, false);
+        this(file, false);//清空文件并且从头开始输入
     }
 
     /**
@@ -205,10 +205,10 @@ class FileOutputStream extends OutputStream
     public FileOutputStream(File file, boolean append)
         throws FileNotFoundException
     {
-        String name = (file != null ? file.getPath() : null);
-        SecurityManager security = System.getSecurityManager();
+        String name = (file != null ? file.getPath() : null);//file的路径和文件名
+        SecurityManager security = System.getSecurityManager();//获取操作系统的安全管理器
         if (security != null) {
-            security.checkWrite(name);
+            security.checkWrite(name);//检查对文件是否有写入权限
         }
         if (name == null) {
             throw new NullPointerException();
@@ -217,7 +217,7 @@ class FileOutputStream extends OutputStream
             throw new FileNotFoundException("Invalid file path");
         }
         this.fd = new FileDescriptor();
-        fd.attach(this);
+        fd.attach(this);//便于文件描述符关闭文件
         this.append = append;
         this.path = name;
 
@@ -228,18 +228,22 @@ class FileOutputStream extends OutputStream
      * Creates a file output stream to write to the specified file
      * descriptor, which represents an existing connection to an actual
      * file in the file system.
+     * 创建一个文件输入流写入到具体的文件描述符中，该文件描述符表示了对一个文件系统中实际文件存在的链接
      * <p>
      * First, if there is a security manager, its <code>checkWrite</code>
      * method is called with the file descriptor <code>fdObj</code>
      * argument as its argument.
+     * 安全管理器的checkWrite参数是文件描述符fdObj
      * <p>
      * If <code>fdObj</code> is null then a <code>NullPointerException</code>
      * is thrown.
      * <p>
+     * 如果fdObj是null会抛出NullPointerException
      * This constructor does not throw an exception if <code>fdObj</code>
      * is {@link java.io.FileDescriptor#valid() invalid}.
      * However, if the methods are invoked on the resulting stream to attempt
      * I/O on the stream, an <code>IOException</code> is thrown.
+     * 如果fdObj不可用不会抛出异常，但是，如果此时尝试调用该流的IO方法会抛出IOException
      *
      * @param      fdObj   the file descriptor to be opened for writing
      * @exception  SecurityException  if a security manager exists and its
@@ -256,8 +260,8 @@ class FileOutputStream extends OutputStream
             security.checkWrite(fdObj);
         }
         this.fd = fdObj;
-        this.append = false;
-        this.path = null;
+        this.append = false;//从头写入
+        this.path = null;//使用文件描述符时没有路径
 
         fd.attach(this);
     }
@@ -273,26 +277,28 @@ class FileOutputStream extends OutputStream
     // wrap native call to allow instrumentation
     /**
      * Opens a file, with the specified name, for overwriting or appending.
+     * 通过具体的名字打开一个文件来重写或扩展
      * @param name name of file to be opened
      * @param append whether the file is to be opened in append mode
      */
     private void open(String name, boolean append)
         throws FileNotFoundException {
-        open0(name, append);
+        open0(name, append);//调用native方法打开文件
     }
 
     /**
      * Writes the specified byte to this file output stream.
      *
-     * @param   b   the byte to be written.
+     * @param   b   the byte to be written.要写入的byte
      * @param   append   {@code true} if the write operation first
-     *     advances the position to the end of file
+     *     advances the position to the end of file为true时写到文件末尾
      */
     private native void write(int b, boolean append) throws IOException;
 
     /**
      * Writes the specified byte to this file output stream. Implements
      * the <code>write</code> method of <code>OutputStream</code>.
+     * 将具体的byte写入到文件输出流中，实现了OutputStream.write方法
      *
      * @param      b   the byte to be written.
      * @exception  IOException  if an I/O error occurs.
@@ -303,9 +309,10 @@ class FileOutputStream extends OutputStream
 
     /**
      * Writes a sub array as a sequence of bytes.
+     * native方法，将一个bytes序列的子数组写入
      * @param b the data to be written
-     * @param off the start offset in the data
-     * @param len the number of bytes that are written
+     * @param off the start offset in the data开始的偏移位置
+     * @param len the number of bytes that are written写入的bytes长度
      * @param append {@code true} to first advance the position to the
      *     end of file
      * @exception IOException If an I/O error has occurred.
@@ -341,9 +348,11 @@ class FileOutputStream extends OutputStream
      * Closes this file output stream and releases any system resources
      * associated with this stream. This file output stream may no longer
      * be used for writing bytes.
+     * 关闭这个文件输出流并释放任何关联的系统资源，这个输出流不能再用于写入bytes
      *
      * <p> If this stream has an associated channel then the channel is closed
      * as well.
+     * 如果流关联到了通道，则通道也关闭
      *
      * @exception  IOException  if an I/O error occurs.
      *
@@ -351,7 +360,7 @@ class FileOutputStream extends OutputStream
      * @spec JSR-51
      */
     public void close() throws IOException {
-        synchronized (closeLock) {
+        synchronized (closeLock) {//close只能进行一次所以需要是线程安全的，只能由一个线程进行
             if (closed) {
                 return;
             }
@@ -359,7 +368,7 @@ class FileOutputStream extends OutputStream
         }
 
         if (channel != null) {
-            channel.close();
+            channel.close();//关闭文件通道
         }
 
         fd.closeAll(new Closeable() {
@@ -371,6 +380,7 @@ class FileOutputStream extends OutputStream
 
     /**
      * Returns the file descriptor associated with this stream.
+     * 返回文件描述符
      *
      * @return  the <code>FileDescriptor</code> object that represents
      *          the connection to the file in the file system being used
@@ -389,6 +399,7 @@ class FileOutputStream extends OutputStream
     /**
      * Returns the unique {@link java.nio.channels.FileChannel FileChannel}
      * object associated with this file output stream.
+     * 返回关联的文件通道
      *
      * <p> The initial {@link java.nio.channels.FileChannel#position()
      * position} of the returned channel will be equal to the
@@ -397,6 +408,8 @@ class FileOutputStream extends OutputStream
      * Writing bytes to this stream will increment the channel's position
      * accordingly.  Changing the channel's position, either explicitly or by
      * writing, will change this stream's file position.
+     * 返回通道的初始化等于到目前为止写入文件的bytes数量，除非当前的流是扩展模式，该模式下等于文件的大小。
+     * 写入bytes将会增加通道的位置，无论是通过写入或者指明来改变通道的位置都会改变流的文件位置
      *
      * @return  the file channel associated with this file output stream
      *
@@ -404,7 +417,7 @@ class FileOutputStream extends OutputStream
      * @spec JSR-51
      */
     public FileChannel getChannel() {
-        synchronized (this) {
+        synchronized (this) {//确保只初始化一次
             if (channel == null) {
                 channel = FileChannelImpl.open(fd, path, false, true, append, this);
             }
@@ -416,6 +429,7 @@ class FileOutputStream extends OutputStream
      * Cleans up the connection to the file, and ensures that the
      * <code>close</code> method of this file output stream is
      * called when there are no more references to this stream.
+     * 清除所有到文件的连接，确保当没有其他对这个流的引用时，close方法被调用
      *
      * @exception  IOException  if an I/O error occurs.
      * @see        java.io.FileInputStream#close()
@@ -429,6 +443,8 @@ class FileOutputStream extends OutputStream
                  * will ensure that finalizer is only called when
                  * safe to do so. All references using the fd have
                  * become unreachable. We can call close()
+                 * 如果fd被共享，FileDescriptor中的引用会确保终结器只在安全的时候被调用。
+                 * 所有使用fd的引用都不可达时，我们调用close
                  */
                 close();
             }
