@@ -33,10 +33,12 @@ import sun.nio.ch.FileChannelImpl;
  * A <code>FileInputStream</code> obtains input bytes
  * from a file in a file system. What files
  * are  available depends on the host environment.
+ * FileInputStream从文件系统中的文件获取bytes，文件是否有效取决于主机环境。
  *
  * <p><code>FileInputStream</code> is meant for reading streams of raw bytes
  * such as image data. For reading streams of characters, consider using
  * <code>FileReader</code>.
+ * FileInputStream对于直接从流中读取bytes数据非常有意义如图像数据。如果要读取字符信息，考虑使用FileReader
  *
  * @author  Arthur van Hoff
  * @see     java.io.File
@@ -48,12 +50,13 @@ import sun.nio.ch.FileChannelImpl;
 public
 class FileInputStream extends InputStream
 {
-    /* File Descriptor - handle to the open file */
+    /* File Descriptor - handle to the open file 文件描述符，用来打开文件*/
     private final FileDescriptor fd;
 
     /**
      * The path of the referenced file
      * (null if the stream is created with a file descriptor)
+     * 引用文件的路径，如果流是通过文件描述符创建时该值为null
      */
     private final String path;
 
@@ -69,15 +72,19 @@ class FileInputStream extends InputStream
      * in the file system.  A new <code>FileDescriptor</code>
      * object is created to represent this file
      * connection.
+     * 通过打开一个连接实际文件的连接来创建一个FileInputStream，文件通过文件系统中的路径名name来命名。
+     * 一个新的文件描述符对象会被创建来表示这个文件连接
      * <p>
      * First, if there is a security
      * manager, its <code>checkRead</code> method
      * is called with the <code>name</code> argument
      * as its argument.
+     * 如果存在安全管理器，checkRead方法会被调用，name作为参数传入
      * <p>
      * If the named file does not exist, is a directory rather than a regular
      * file, or for some other reason cannot be opened for reading then a
      * <code>FileNotFoundException</code> is thrown.
+     * 如果文件名不存在，或者是一个目录而不是规则文件，或者因为其他原因无法打开读取，抛出FileNotFoundException
      *
      * @param      name   the system-dependent file name.
      * @exception  FileNotFoundException  if the file does not exist,
@@ -121,10 +128,10 @@ class FileInputStream extends InputStream
      * @see        java.lang.SecurityManager#checkRead(java.lang.String)
      */
     public FileInputStream(File file) throws FileNotFoundException {
-        String name = (file != null ? file.getPath() : null);
+        String name = (file != null ? file.getPath() : null);//name是file的路径名
         SecurityManager security = System.getSecurityManager();
         if (security != null) {
-            security.checkRead(name);
+            security.checkRead(name);//检查是否对文件有读取权限
         }
         if (name == null) {
             throw new NullPointerException();
@@ -133,9 +140,9 @@ class FileInputStream extends InputStream
             throw new FileNotFoundException("Invalid file path");
         }
         fd = new FileDescriptor();
-        fd.attach(this);
+        fd.attach(this);//绑定文件描述符便于关闭对象
         path = name;
-        open(name);
+        open(name);//打开文件
     }
 
     /**
@@ -143,6 +150,7 @@ class FileInputStream extends InputStream
      * <code>fdObj</code>, which represents an existing connection to an
      * actual file in the file system.
      * <p>
+     * 通过文件描述符fdObj来创建FileInputStream，代表了对一个文件系统中实际存在文件的连接
      * If there is a security manager, its <code>checkRead</code> method is
      * called with the file descriptor <code>fdObj</code> as its argument to
      * see if it's ok to read the file descriptor. If read access is denied
@@ -150,11 +158,13 @@ class FileInputStream extends InputStream
      * <p>
      * If <code>fdObj</code> is null then a <code>NullPointerException</code>
      * is thrown.
+     * 如果FileInputStream是null会抛出NullPointerException
      * <p>
      * This constructor does not throw an exception if <code>fdObj</code>
      * is {@link java.io.FileDescriptor#valid() invalid}.
      * However, if the methods are invoked on the resulting stream to attempt
      * I/O on the stream, an <code>IOException</code> is thrown.
+     * 如果fdObj是无效的，构造器不会抛出异常，但是，如果调用这个流的IO方法，会抛出IOException
      *
      * @param      fdObj   the file descriptor to be opened for reading.
      * @throws     SecurityException      if a security manager exists and its
@@ -176,12 +186,14 @@ class FileInputStream extends InputStream
         /*
          * FileDescriptor is being shared by streams.
          * Register this stream with FileDescriptor tracker.
+         * 文件描述符被流共享，将这个流注册到文件描述符的追踪器
          */
         fd.attach(this);
     }
 
     /**
      * Opens the specified file for reading.
+     * 打开具体的文件读取
      * @param name the name of the file
      */
     private native void open0(String name) throws FileNotFoundException;
@@ -198,6 +210,7 @@ class FileInputStream extends InputStream
     /**
      * Reads a byte of data from this input stream. This method blocks
      * if no input is yet available.
+     * 从流中读取byte，如果没有有输出没有完成会阻塞方法。
      *
      * @return     the next byte of data, or <code>-1</code> if the end of the
      *             file is reached.
@@ -211,6 +224,7 @@ class FileInputStream extends InputStream
 
     /**
      * Reads a subarray as a sequence of bytes.
+     * 读取bytes序列子数组
      * @param b the data to be written
      * @param off the start offset in the data
      * @param len the number of bytes that are written
@@ -222,6 +236,7 @@ class FileInputStream extends InputStream
      * Reads up to <code>b.length</code> bytes of data from this input
      * stream into an array of bytes. This method blocks until some input
      * is available.
+     * 从流中读取最大b.length的bytes数据到数组b中。该方法会被阻塞知道某些输入完成。
      *
      * @param      b   the buffer into which the data is read.
      * @return     the total number of bytes read into the buffer, or
@@ -258,6 +273,7 @@ class FileInputStream extends InputStream
     /**
      * Skips over and discards <code>n</code> bytes of data from the
      * input stream.
+     * 跳过并废弃输入流中n个bytes数据
      *
      * <p>The <code>skip</code> method may, for a variety of
      * reasons, end up skipping over some smaller number of bytes,
@@ -267,12 +283,16 @@ class FileInputStream extends InputStream
      * thrown. The actual number of bytes skipped is returned. If it skips
      * forwards, it returns a positive value. If it skips backwards, it
      * returns a negative value.
+     * skip方法可能因为一些不同的原因以跳过更少的bytes数结束，可能这个数量是0.如果n是负数，方法会尝试往回跳。
+     * 如果文件不支持从当前位置往回掉，会抛出IOException。返回的是实际跳过的bytes数量，为正是往后跳，为负是往前跳。
      *
      * <p>This method may skip more bytes than what are remaining in the
      * backing file. This produces no exception and the number of bytes skipped
      * may include some number of bytes that were beyond the EOF of the
      * backing file. Attempting to read from the stream after skipping past
      * the end will result in -1 indicating the end of the file.
+     * 可能会跳过比文件中剩余数量更多的bytes数，这个过程不会产生异常，跳过的bytes数可能包括了一些文件中超过了EOF文件结束符的bytes数
+     * 跳过了文件结束符再尝试读取会返回-1，说明已经到达文件末尾
      *
      * @param      n   the number of bytes to be skipped.
      * @return     the actual number of bytes skipped.
@@ -288,10 +308,13 @@ class FileInputStream extends InputStream
      * position is beyond EOF. The next invocation might be the same thread
      * or another thread. A single read or skip of this many bytes will not
      * block, but may read or skip fewer bytes.
+     * 返回剩余可读取的或者可跳过的bytes数的估计值，这个过程不会阻塞下一个操作。文件超过EOF时返回0.
+     * 下一个调用可能是相同的线程或不同的线程，一个读取或者跳过这么多bytes的操作不会被阻塞，但是可能读取或跳过更少的bytes
      *
      * <p> In some cases, a non-blocking read (or skip) may appear to be
      * blocked when it is merely slow, for example when reading large
      * files over slow networks.
+     * 一些情况下，一个非阻塞的读取或者跳过可能在非常慢时被阻塞，比如从一个很慢的网络中读取大文件
      *
      * @return     an estimate of the number of remaining bytes that can be read
      *             (or skipped over) from this input stream without blocking.
@@ -303,9 +326,11 @@ class FileInputStream extends InputStream
     /**
      * Closes this file input stream and releases any system resources
      * associated with the stream.
+     * 关闭文件输入流并释放相关联的任何系统资源
      *
      * <p> If this stream has an associated channel then the channel is closed
      * as well.
+     * 如果流关联通道则通道也要关闭
      *
      * @exception  IOException  if an I/O error occurs.
      *
@@ -313,17 +338,17 @@ class FileInputStream extends InputStream
      * @spec JSR-51
      */
     public void close() throws IOException {
-        synchronized (closeLock) {
+        synchronized (closeLock) {//只能由一个线程来执行关闭一次
             if (closed) {
                 return;
             }
             closed = true;
         }
         if (channel != null) {
-           channel.close();
+           channel.close();//关闭关联的通道
         }
 
-        fd.closeAll(new Closeable() {
+        fd.closeAll(new Closeable() {//通知文件描述符关闭文件
             public void close() throws IOException {
                close0();
            }
@@ -350,6 +375,7 @@ class FileInputStream extends InputStream
     /**
      * Returns the unique {@link java.nio.channels.FileChannel FileChannel}
      * object associated with this file input stream.
+     * 返回关联的通道
      *
      * <p> The initial {@link java.nio.channels.FileChannel#position()
      * position} of the returned channel will be equal to the
@@ -357,6 +383,7 @@ class FileInputStream extends InputStream
      * stream will increment the channel's position.  Changing the channel's
      * position, either explicitly or by reading, will change this stream's
      * file position.
+     * 初始化通道的位置是目前位置从文件中读取的bytes数量。从流中读取bytes会增加通道的位置，改变通道的位置会改变流中的文件位置
      *
      * @return  the file channel associated with this file input stream
      *
@@ -364,7 +391,7 @@ class FileInputStream extends InputStream
      * @spec JSR-51
      */
     public FileChannel getChannel() {
-        synchronized (this) {
+        synchronized (this) {//初始化单例
             if (channel == null) {
                 channel = FileChannelImpl.open(fd, path, true, false, this);
             }
@@ -383,6 +410,7 @@ class FileInputStream extends InputStream
     /**
      * Ensures that the <code>close</code> method of this file input stream is
      * called when there are no more references to it.
+     * 确保close在没有任何对流的引用时被调用
      *
      * @exception  IOException  if an I/O error occurs.
      * @see        java.io.FileInputStream#close()
@@ -393,6 +421,8 @@ class FileInputStream extends InputStream
              * will ensure that finalizer is only called when
              * safe to do so. All references using the fd have
              * become unreachable. We can call close()
+             * 如果fd被共享，FileDescriptor中的引用会确保终结方法只会在安全的时候调用。
+             * 所有使用fd的引用都不可达时，我们调用close
              */
             close();
         }
