@@ -20,7 +20,6 @@ public class FileTest {
 		out = new FileOutputStream("D:/test/file.txt");
 		out.close();//内容为空
 		
-		
 		//测试filechannel位置改变对stream的影响
 		out = new FileOutputStream("D:/test/file.txt");
 		out.write("1234567890".getBytes());//1234567890

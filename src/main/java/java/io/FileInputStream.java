@@ -61,7 +61,7 @@ class FileInputStream extends InputStream
     private final String path;
 
     private FileChannel channel = null;
-
+    //用于保证close操作的线程安全性
     private final Object closeLock = new Object();
     private volatile boolean closed = false;
 
