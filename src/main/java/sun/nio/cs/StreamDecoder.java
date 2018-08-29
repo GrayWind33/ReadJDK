@@ -304,7 +304,7 @@ public class StreamDecoder extends Reader {
 		boolean eof = false;//decode的第三个参数只有在调用者确保除了buffer中的字节外没有其他字节了才是true
 		for (;;) {
 			CoderResult cr = decoder.decode(bb, cb, eof);//将ByteBuffer内的字节解码存入CharBuffer
-			if (cr.isUnderflow()) {//向下溢出，CharBuffer没有填满
+			if (cr.isUnderflow()) {//未溢出，CharBuffer没有填满
 				if (eof)
 					break;
 				if (!cb.hasRemaining())
@@ -320,7 +320,7 @@ public class StreamDecoder extends Reader {
 				}
 				continue;
 			}
-			if (cr.isOverflow()) {//向上溢出，CharBuffer满了
+			if (cr.isOverflow()) {//溢出，CharBuffer满了
 				assert cb.position() > 0;
 				break;
 			}
