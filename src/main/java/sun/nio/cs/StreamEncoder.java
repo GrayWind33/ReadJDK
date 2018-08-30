@@ -66,7 +66,7 @@ public class StreamEncoder extends Writer {
 		return new StreamEncoder(out, lock, enc);
 	}
 
-	// Factory for java.nio.channels.Channels.newWriter
+	// java.nio.channels.Channels.newWriter工厂模式
 
 	public static StreamEncoder forEncoder(WritableByteChannel ch, CharsetEncoder enc, int minBufferCap) {
 		return new StreamEncoder(ch, enc, minBufferCap);
@@ -78,12 +78,14 @@ public class StreamEncoder extends Writer {
 	// methods; the concrete stream-encoder subclasses defined below need not
 	// do any such checking.
 
+	//返回字符集的历史名，没有的话返回官方名
 	public String getEncoding() {
 		if (isOpen())
 			return encodingName();
 		return null;
 	}
 
+	//将ByteBuffer中的数据写入输出流
 	public void flushBuffer() throws IOException {
 		synchronized (lock) {
 			if (isOpen())
@@ -98,7 +100,7 @@ public class StreamEncoder extends Writer {
 		cbuf[0] = (char) c;
 		write(cbuf, 0, 1);
 	}
-
+	//这个是实际调用写入的方法
 	public void write(char cbuf[], int off, int len) throws IOException {
 		synchronized (lock) {
 			ensureOpen();
@@ -146,7 +148,7 @@ public class StreamEncoder extends Writer {
 	private CharsetEncoder encoder;
 	private ByteBuffer bb;
 
-	// Exactly one of these is non-null
+	// Exactly one of these is non-null至少有一个不为null
 	private final OutputStream out;
 	private WritableByteChannel ch;
 
@@ -174,7 +176,7 @@ public class StreamEncoder extends Writer {
 				bb = ByteBuffer.allocateDirect(DEFAULT_BYTE_BUFFER_SIZE);
 		}
 		if (ch == null) {
-			bb = ByteBuffer.allocate(DEFAULT_BYTE_BUFFER_SIZE);
+			bb = ByteBuffer.allocate(DEFAULT_BYTE_BUFFER_SIZE);//分配一个8K的堆内ByteBuffer
 		}
 	}
 
@@ -183,7 +185,7 @@ public class StreamEncoder extends Writer {
 		this.ch = ch;
 		this.cs = enc.charset();
 		this.encoder = enc;
-		this.bb = ByteBuffer.allocate(mbc < 0 ? DEFAULT_BYTE_BUFFER_SIZE : mbc);
+		this.bb = ByteBuffer.allocate(mbc < 0 ? DEFAULT_BYTE_BUFFER_SIZE : mbc);//分配一个大小mbc的堆内ByteBuffer
 	}
 
 	private void writeBytes() throws IOException {
@@ -241,11 +243,11 @@ public class StreamEncoder extends Writer {
 		CharBuffer cb = CharBuffer.wrap(cbuf, off, len);// 将字符数组组装成一个堆内CharBuffer，数组中的内容不存在复制
 
 		if (haveLeftoverChar)
-			flushLeftoverChar(cb, false);
+			flushLeftoverChar(cb, false);//如果有的话，将leftoverChar写入输出流
 
 		while (cb.hasRemaining()) {
-			CoderResult cr = encoder.encode(cb, bb, false);
-			if (cr.isUnderflow()) {
+			CoderResult cr = encoder.encode(cb, bb, false);//将字符编码为二进制字节直到ByteBuffer满或者CharBuffer中没有更多内容
+			if (cr.isUnderflow()) {//ByteBuffer没有满，说明CharBuffer内的内容全部编码完成
 				assert (cb.remaining() <= 1) : cb.remaining();
 				if (cb.remaining() == 1) {
 					//如果当前缓冲区仅剩一个字符，保存到leftoverChar并修改haveLeftoverChar状态，结束输出
@@ -279,7 +281,7 @@ public class StreamEncoder extends Writer {
 		try {
 			for (;;) {
 				CoderResult cr = encoder.flush(bb);
-				if (cr.isUnderflow())//cr未溢出说明ByteBuffer中的数据全部落盘了
+				if (cr.isUnderflow())//cr未溢出说明ByteBuffer中的数据全部写入到输入流了
 					break;
 				if (cr.isOverflow()) {//cr溢出说明ByteBuffer仍然存在数据
 					assert bb.position() > 0;
