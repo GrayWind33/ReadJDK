@@ -1,5 +1,6 @@
 package test;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -38,5 +39,11 @@ public class FileTest {
 		
 		in.skip(-1);//向前跳一位
 		System.out.print(String.valueOf((byte)in.read() & 0xf));//1
+		
+		BufferedOutputStream bout = new BufferedOutputStream(new FileOutputStream("D:/test/file.txt"));
+		bout.write("1234567890".getBytes());//1234567890
+		bout.close();
+		bout.write("1234567890".getBytes());//这里写入的数据在缓冲区的数组中所以不报错
+		bout.flush();//这里会报错
 	}
 }
