@@ -1315,7 +1315,7 @@ public class ObjectOutputStream
         bout.setBlockDataMode(false);
         bout.writeByte(TC_ENDBLOCKDATA);
 
-        writeClassDesc(desc.getSuperDesc(), false);
+        writeClassDesc(desc.getSuperDesc(), false);//写入父类的描述信息
     }
 
     /**
@@ -1324,7 +1324,7 @@ public class ObjectOutputStream
      */
     private void writeString(String str, boolean unshared) throws IOException {
         handles.assign(unshared ? null : str);
-        long utflen = bout.getUTFLength(str);
+        long utflen = bout.getUTFLength(str);//获得UTF编码长度
         if (utflen <= 0xFFFF) {
             bout.writeByte(TC_STRING);
             bout.writeUTF(str, utflen);
@@ -1386,7 +1386,7 @@ public class ObjectOutputStream
         } else {
             Object[] objs = (Object[]) array;
             int len = objs.length;
-            bout.writeInt(len);
+            bout.writeInt(len);//写入元素个数
             if (extendedDebugInfo) {
                 debugInfoStack.push(
                     "array (class \"" + array.getClass().getName() +
@@ -1399,7 +1399,7 @@ public class ObjectOutputStream
                             "element of array (index: " + i + ")");
                     }
                     try {
-                        writeObject0(objs[i], false);
+                        writeObject0(objs[i], false);//递归调用写对象
                     } finally {
                         if (extendedDebugInfo) {
                             debugInfoStack.pop();
@@ -1558,7 +1558,7 @@ public class ObjectOutputStream
         bout.write(primVals, 0, primDataSize, false);//输出缓冲区内容
 
         ObjectStreamField[] fields = desc.getFields(false);
-        Object[] objVals = new Object[desc.getNumObjFields()];
+        Object[] objVals = new Object[desc.getNumObjFields()];//获取非基本数据类型对象
         int numPrimFields = fields.length - objVals.length;
         desc.getObjFieldValues(obj, objVals);
         for (int i = 0; i < objVals.length; i++) {
@@ -1570,7 +1570,7 @@ public class ObjectOutputStream
             }
             try {
                 writeObject0(objVals[i],
-                             fields[numPrimFields + i].isUnshared());
+                             fields[numPrimFields + i].isUnshared());//递归输出
             } finally {
                 if (extendedDebugInfo) {
                     debugInfoStack.pop();

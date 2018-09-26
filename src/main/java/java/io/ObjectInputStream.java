@@ -220,7 +220,7 @@ public class ObjectInputStream
     /** marker for unshared objects in internal handle table在内部句柄表不共享对象的标记 */
     private static final Object unsharedMarker = new Object();
 
-    /** table mapping primitive type names to corresponding class objects表映射原始类型名字到相应的类对象 */
+    /** table mapping primitive type names to corresponding class objects表映射基本数据类型名字到相应的类对象 */
     private static final HashMap<String, Class<?>> primClasses
         = new HashMap<>(8, 1.0F);
     static {
@@ -428,26 +428,26 @@ public class ObjectInputStream
         throws IOException, ClassNotFoundException
     {
         if (enableOverride) {
-            return readObjectOverride();
+            return readObjectOverride();//因为是final方法，子类要重写只能通过这里
         }
 
-        // if nested read, passHandle contains handle of enclosing object
+        // if nested read, passHandle contains handle of enclosing object如果是嵌套读取，passHandle包含封闭对象的句柄
         int outerHandle = passHandle;
         try {
             Object obj = readObject0(false);
-            handles.markDependency(outerHandle, passHandle);
+            handles.markDependency(outerHandle, passHandle);//记录句柄依赖
             ClassNotFoundException ex = handles.lookupException(passHandle);
             if (ex != null) {
                 throw ex;
             }
             if (depth == 0) {
-                vlist.doCallbacks();
+                vlist.doCallbacks();//最上层调用的读取完成后，发起回调
             }
             return obj;
         } finally {
             passHandle = outerHandle;
             if (closed && depth == 0) {
-                clear();
+                clear();//最上层调用退出时清除调用返回列表和句柄缓存
             }
         }
     }
@@ -758,7 +758,7 @@ public class ObjectInputStream
         ClassLoader nonPublicLoader = null;
         boolean hasNonPublicInterface = false;
 
-        // define proxy in class loader of non-public interface(s), if any
+        // define proxy in class loader of non-public interface(s), if any定义代理为类加载器中的非public接口
         Class<?>[] classObjs = new Class<?>[interfaces.length];
         for (int i = 0; i < interfaces.length; i++) {
             Class<?> cl = Class.forName(interfaces[i], false, latestLoader);
@@ -778,7 +778,7 @@ public class ObjectInputStream
         try {
             return Proxy.getProxyClass(
                 hasNonPublicInterface ? nonPublicLoader : latestLoader,
-                classObjs);
+                classObjs);//动态代理类由最近使用的类加载器来决定
         } catch (IllegalArgumentException e) {
             throw new ClassNotFoundException(null, e);
         }
@@ -1228,6 +1228,7 @@ public class ObjectInputStream
     /**
      * Invoke the serialization filter if non-null.
      * If the filter rejects or an exception is thrown, throws InvalidClassException.
+     * 如果序列化过滤器非null则调用它。如果过滤器拒绝或者抛出异常，抛出InvalidClassException
      *
      * @param clazz the class; may be null
      * @param arrayLength the array length requested; use {@code -1} if not creating an array
@@ -1457,7 +1458,6 @@ public class ObjectInputStream
      * security-sensitive non-final methods, or else the
      * "enableSubclassImplementation" SerializablePermission is checked.
      * 确认这个（可能是子类）实例可以不用违背安全约束构造：子类不能重写安全敏感的非final方法，否则要检查enableSubclassImplementation序列化许可
-     * 猜测这个过程可能引起了性能消耗
      */
     private void verifySubclass() {
         Class<?> cl = getClass();
@@ -1527,7 +1527,7 @@ public class ObjectInputStream
      */
     private Object readObject0(boolean unshared) throws IOException {
         boolean oldMode = bin.getBlockDataMode();
-        if (oldMode) {
+        if (oldMode) {//之前是块输入模式且有未消费的数据会抛出异常
             int remain = bin.currentBlockRemaining();
             if (remain > 0) {
                 throw new OptionalDataException(remain);
@@ -1537,6 +1537,7 @@ public class ObjectInputStream
                  * value block written via default serialization; since there
                  * is no terminating TC_ENDBLOCKDATA tag, simulate
                  * end-of-custom-data behavior explicitly.
+                 * 流当前在字段值通过默认序列化块写的末尾，因为没有终止TC_ENDBLOCKDATA标记，模拟通常数据结尾的行为
                  */
                 throw new OptionalDataException(true);
             }
@@ -1544,13 +1545,13 @@ public class ObjectInputStream
         }
 
         byte tc;
-        while ((tc = bin.peekByte()) == TC_RESET) {
-            bin.readByte();
-            handleReset();
+        while ((tc = bin.peekByte()) == TC_RESET) {//读到流reset标志
+            bin.readByte();//消耗缓存的字节
+            handleReset();//depth为0时执行clear方法，否则抛出异常
         }
 
-        depth++;
-        totalObjectRefs++;
+        depth++;//增加递归深度
+        totalObjectRefs++;//增加引用对象数
         try {
             switch (tc) {
                 case TC_NULL:
@@ -1577,7 +1578,7 @@ public class ObjectInputStream
                     return checkResolve(readEnum(unshared));
 
                 case TC_OBJECT:
-                    return checkResolve(readOrdinaryObject(unshared));
+                    return checkResolve(readOrdinaryObject(unshared));//一般会先进入这里
 
                 case TC_EXCEPTION:
                     IOException ex = readFatalException();
@@ -1671,6 +1672,7 @@ public class ObjectInputStream
 
     /**
      * Reads in null code, sets passHandle to NULL_HANDLE and returns null.
+     * 读取null代码，设置passHandle为NULL_HANDLE并返回null
      */
     private Object readNull() throws IOException {
         if (bin.readByte() != TC_NULL) {
@@ -1683,12 +1685,13 @@ public class ObjectInputStream
     /**
      * Reads in object handle, sets passHandle to the read handle, and returns
      * object associated with the handle.
+     * 读取对象句柄，设置passHandle为读取句柄，并返回和句柄关联的对象
      */
     private Object readHandle(boolean unshared) throws IOException {
         if (bin.readByte() != TC_REFERENCE) {
             throw new InternalError();
         }
-        passHandle = bin.readInt() - baseWireHandle;
+        passHandle = bin.readInt() - baseWireHandle;//因为写的时候handle值加上了baseWireHandle
         if (passHandle < 0 || passHandle >= handles.size()) {
             throw new StreamCorruptedException(
                 String.format("invalid handle value: %08X", passHandle +
@@ -1700,13 +1703,13 @@ public class ObjectInputStream
                 "cannot read back reference as unshared");
         }
 
-        Object obj = handles.lookupObject(passHandle);
+        Object obj = handles.lookupObject(passHandle);//缓存中寻找该对象
         if (obj == unsharedMarker) {
             // REMIND: what type of exception to throw here?
             throw new InvalidObjectException(
                 "cannot read back reference to unshared object");
         }
-        filterCheck(null, -1);       // just a check for number of references, depth, no class
+        filterCheck(null, -1);       // just a check for number of references, depth, no class检查引用数量，递归深度，是否有这个类
         return obj;
     }
 
@@ -1778,6 +1781,8 @@ public class ObjectInputStream
      * passHandle to proxy class descriptor's assigned handle.  If proxy class
      * descriptor cannot be resolved to a class in the local VM, a
      * ClassNotFoundException is associated with the descriptor's handle.
+     * 读取并返回一个动态代理类的类描述符。设置passHandle到动态类描述符的设置句柄。
+     * 如果动态类描述符不能被解析为本地虚拟机中的一个类，一个ClassNotFoundException会被关联到描述符的句柄中。
      */
     private ObjectStreamClass readProxyDesc(boolean unshared)
         throws IOException
@@ -1787,17 +1792,17 @@ public class ObjectInputStream
         }
 
         ObjectStreamClass desc = new ObjectStreamClass();
-        int descHandle = handles.assign(unshared ? unsharedMarker : desc);
+        int descHandle = handles.assign(unshared ? unsharedMarker : desc);//添加描述符到句柄缓存中
         passHandle = NULL_HANDLE;
 
-        int numIfaces = bin.readInt();
+        int numIfaces = bin.readInt();//接口实现类数量
         if (numIfaces > 65535) {
             throw new InvalidObjectException("interface limit exceeded: "
                     + numIfaces);
         }
         String[] ifaces = new String[numIfaces];
         for (int i = 0; i < numIfaces; i++) {
-            ifaces[i] = bin.readUTF();
+            ifaces[i] = bin.readUTF();//读取接口名
         }
 
         Class<?> cl = null;
@@ -1812,10 +1817,11 @@ public class ObjectInputStream
                 // ReflectUtil.checkProxyPackageAccess makes a test
                 // equivalent to isCustomSubclass so there's no need
                 // to condition this call to isCustomSubclass == true here.
+            	//这个检查等价于isCustomSubclass
                 ReflectUtil.checkProxyPackageAccess(
                         getClass().getClassLoader(),
                         cl.getInterfaces());
-                // Filter the interfaces
+                // Filter the interfaces过滤接口
                 for (Class<?> clazz : cl.getInterfaces()) {
                     filterCheck(clazz, -1);
                 }
@@ -1832,7 +1838,7 @@ public class ObjectInputStream
         try {
             totalObjectRefs++;
             depth++;
-            desc.initProxy(cl, resolveEx, readClassDesc(false));
+            desc.initProxy(cl, resolveEx, readClassDesc(false));//初始化类描述符
         } finally {
             depth--;
         }
@@ -1856,7 +1862,7 @@ public class ObjectInputStream
         }
 
         ObjectStreamClass desc = new ObjectStreamClass();
-        int descHandle = handles.assign(unshared ? unsharedMarker : desc);
+        int descHandle = handles.assign(unshared ? unsharedMarker : desc);//将描述符存储到句柄缓存中，返回句柄值
         passHandle = NULL_HANDLE;
 
         ObjectStreamClass readDesc = null;
@@ -1872,7 +1878,7 @@ public class ObjectInputStream
         bin.setBlockDataMode(true);
         final boolean checksRequired = isCustomSubclass();
         try {
-            if ((cl = resolveClass(readDesc)) == null) {
+            if ((cl = resolveClass(readDesc)) == null) {//通过类描述解析类
                 resolveEx = new ClassNotFoundException("null class");
             } else if (checksRequired) {
                 ReflectUtil.checkPackageAccess(cl);
@@ -1889,7 +1895,7 @@ public class ObjectInputStream
         try {
             totalObjectRefs++;
             depth++;
-            desc.initNonProxy(readDesc, cl, resolveEx, readClassDesc(false));
+            desc.initNonProxy(readDesc, cl, resolveEx, readClassDesc(false));//初始化类描述符
         } finally {
             depth--;
         }
@@ -2046,7 +2052,7 @@ public class ObjectInputStream
             throw new InternalError();
         }
 
-        ObjectStreamClass desc = readClassDesc(false);
+        ObjectStreamClass desc = readClassDesc(false);//读取类描述信息
         desc.checkDeserialize();
 
         Class<?> cl = desc.forClass();
@@ -2057,30 +2063,30 @@ public class ObjectInputStream
 
         Object obj;
         try {
-            obj = desc.isInstantiable() ? desc.newInstance() : null;
+            obj = desc.isInstantiable() ? desc.newInstance() : null;//根据类描述新建一个实例
         } catch (Exception ex) {
             throw (IOException) new InvalidClassException(
                 desc.forClass().getName(),
                 "unable to create instance").initCause(ex);
         }
 
-        passHandle = handles.assign(unshared ? unsharedMarker : obj);
+        passHandle = handles.assign(unshared ? unsharedMarker : obj);//将对象存储到句柄缓存中
         ClassNotFoundException resolveEx = desc.getResolveException();
         if (resolveEx != null) {
             handles.markException(passHandle, resolveEx);
         }
-
+        //读取序列化内部变量数据
         if (desc.isExternalizable()) {
             readExternalData((Externalizable) obj, desc);
         } else {
             readSerialData(obj, desc);
         }
 
-        handles.finish(passHandle);
+        handles.finish(passHandle);//标记句柄对应的对象读取完成
 
         if (obj != null &&
             handles.lookupException(passHandle) == null &&
-            desc.hasReadResolveMethod())
+            desc.hasReadResolveMethod())//存在替换对象
         {
             Object rep = desc.invokeReadResolve(obj);
             if (unshared && rep.getClass().isArray()) {
@@ -2171,7 +2177,7 @@ public class ObjectInputStream
 
             if (slots[i].hasData) {
                 if (obj == null || handles.lookupException(passHandle) != null) {
-                    defaultReadFields(null, slotDesc); // skip field values
+                    defaultReadFields(null, slotDesc); // skip field values调用类默认的读取字段方法，跳过字段值
                 } else if (slotDesc.hasReadObjectMethod()) {
                     ThreadDeath t = null;
                     boolean reset = false;
@@ -2182,7 +2188,7 @@ public class ObjectInputStream
                         curContext = new SerialCallbackContext(obj, slotDesc);
 
                         bin.setBlockDataMode(true);
-                        slotDesc.invokeReadObject(obj, this);
+                        slotDesc.invokeReadObject(obj, this);//调用类中重写的readObject方法
                     } catch (ClassNotFoundException ex) {
                         /*
                          * In most cases, the handle table has already
@@ -2237,6 +2243,7 @@ public class ObjectInputStream
     /**
      * Skips over all block data and objects until TC_ENDBLOCKDATA is
      * encountered.
+     * 跳过所有块数据和对象，直到遇到TC_ENDBLOCKDATA
      */
     private void skipCustomData() throws IOException {
         int oldHandle = passHandle;
@@ -2545,6 +2552,8 @@ public class ObjectInputStream
          * priorities may be called in any order.  If any of the callbacks
          * throws an InvalidObjectException, the callback process is terminated
          * and the exception propagated upwards.
+         * 调用所有注册的回调并清除回调表。有更高优先级的回调会先被调用，有相同优先级的可能会以任何顺序调用。
+         * 如果回调中有抛出InvalidObjectException，回调过程会被终止，并向上传递异常。
          */
         void doCallbacks() throws InvalidObjectException {
             try {
@@ -3657,13 +3666,13 @@ public class ObjectInputStream
         private static final byte STATUS_UNKNOWN = 2;
         private static final byte STATUS_EXCEPTION = 3;
 
-        /** array mapping handle -> object status */
+        /** array mapping handle -> object status 句柄->对象状态的数组映射*/
         byte[] status;
         /** array mapping handle -> object/exception (depending on status) */
         Object[] entries;
         /** array mapping handle -> list of dependent handles (if any) */
         HandleList[] deps;
-        /** lowest unresolved dependency */
+        /** lowest unresolved dependency 最低的未解决依赖*/
         int lowDep = -1;
         /** number of handles in table */
         int size = 0;
@@ -3697,6 +3706,7 @@ public class ObjectInputStream
          * another.  The dependent handle must be "open" (i.e., assigned, but
          * not finished yet).  No action is taken if either dependent or target
          * handle is NULL_HANDLE.
+         * 在一个句柄上注册另一个句柄的异常状态依赖。这个依赖句柄必须是打开状态，被设置并且没有结束。如果依赖者或者目标有一个是NULL_HANDLE则什么也不做
          */
         void markDependency(int dependent, int target) {
             if (dependent == NULL_HANDLE || target == NULL_HANDLE) {
@@ -3707,23 +3717,23 @@ public class ObjectInputStream
                 case STATUS_UNKNOWN:
                     switch (status[target]) {
                         case STATUS_OK:
-                            // ignore dependencies on objs with no exception
+                            // ignore dependencies on objs with no exception忽略没有异常的对象上依赖
                             break;
 
                         case STATUS_EXCEPTION:
-                            // eagerly propagate exception
+                            // eagerly propagate exception急切传播的异常
                             markException(dependent,
-                                (ClassNotFoundException) entries[target]);
+                                (ClassNotFoundException) entries[target]);//如果依赖是未知状态也需要检查是否它的依赖有异常状态
                             break;
 
                         case STATUS_UNKNOWN:
-                            // add to dependency list of target
+                            // add to dependency list of target增加到依赖目标列表
                             if (deps[target] == null) {
                                 deps[target] = new HandleList();
                             }
                             deps[target].add(dependent);
 
-                            // remember lowest unresolved target seen
+                            // remember lowest unresolved target seen记录被看见最低的未解决目标
                             if (lowDep < 0 || lowDep > target) {
                                 lowDep = target;
                             }
@@ -3747,6 +3757,7 @@ public class ObjectInputStream
          * with the currently active handle and propagates it to other
          * referencing objects as appropriate.  The specified handle must be
          * "open" (i.e., assigned, but not finished yet).
+         * 关联一个ClassNotFoundException和当前活动句柄并传播它到其他合适的引用对象。这个特定的句柄必须是打开的。
          */
         void markException(int handle, ClassNotFoundException ex) {
             switch (status[handle]) {
@@ -3777,6 +3788,7 @@ public class ObjectInputStream
          * Marks given handle as finished, meaning that no new dependencies
          * will be marked for handle.  Calls to the assign and finish methods
          * must occur in LIFO order.
+         * 标记给出的句柄为结束状态，说明这个句柄不会有新的依赖标记。调用设置和结束方法必须以后进先出的顺序。
          */
         void finish(int handle) {
             int end;
