@@ -1941,7 +1941,7 @@ public class ObjectInputStream
         }
 
         ObjectStreamClass desc = readClassDesc(false);
-        int len = bin.readInt();
+        int len = bin.readInt();//读取数组长度
 
         filterCheck(desc.forClass(), len);
 
@@ -1949,7 +1949,7 @@ public class ObjectInputStream
         Class<?> cl, ccl = null;
         if ((cl = desc.forClass()) != null) {
             ccl = cl.getComponentType();
-            array = Array.newInstance(ccl, len);
+            array = Array.newInstance(ccl, len);//新建一个数组
         }
 
         int arrayHandle = handles.assign(unshared ? unsharedMarker : array);
@@ -2285,10 +2285,10 @@ public class ObjectInputStream
 
         int primDataSize = desc.getPrimDataSize();
         if (primVals == null || primVals.length < primDataSize) {
-            primVals = new byte[primDataSize];
+            primVals = new byte[primDataSize];//第一次进行需要初始化缓冲区，缓冲区不足时需要新建一个更大的缓冲区
         }
-            bin.readFully(primVals, 0, primDataSize, false);
-        if (obj != null) {
+            bin.readFully(primVals, 0, primDataSize, false);//将字节流读取到缓冲区
+        if (obj != null) {//从readSerialData进入这个方法时obj为null
             desc.setPrimFieldValues(obj, primVals);
         }
 
@@ -2298,9 +2298,9 @@ public class ObjectInputStream
         int numPrimFields = fields.length - objVals.length;
         for (int i = 0; i < objVals.length; i++) {
             ObjectStreamField f = fields[numPrimFields + i];
-            objVals[i] = readObject0(f.isUnshared());
+            objVals[i] = readObject0(f.isUnshared());//递归读取非基本数据类型类
             if (f.getField() != null) {
-                handles.markDependency(objHandle, passHandle);
+                handles.markDependency(objHandle, passHandle);//记录依赖
             }
         }
         if (obj != null) {
@@ -3121,11 +3121,11 @@ public class ObjectInputStream
                 if (end < 0) {
                     return -1;
                 }
-                int nread = Math.min(len, end - pos);
+                int nread = Math.min(len, end - pos);//最大不超过缓冲区内剩余的字节
                 System.arraycopy(buf, pos, b, off, nread);
                 pos += nread;
                 return nread;
-            } else if (copy) {
+            } else if (copy) {//copy模式先将数据读取到一个缓冲区，再从缓冲区复制到目标数组
                 int nread = in.read(buf, 0, Math.min(len, MAX_BLOCK_SIZE));
                 if (nread > 0) {
                     System.arraycopy(buf, 0, b, off, nread);
@@ -3706,7 +3706,7 @@ public class ObjectInputStream
          * another.  The dependent handle must be "open" (i.e., assigned, but
          * not finished yet).  No action is taken if either dependent or target
          * handle is NULL_HANDLE.
-         * 在一个句柄上注册另一个句柄的异常状态依赖。这个依赖句柄必须是打开状态，被设置并且没有结束。如果依赖者或者目标有一个是NULL_HANDLE则什么也不做
+         * 在一个句柄上注册另一个句柄的(异常状态)依赖。这个依赖句柄必须是打开状态，被设置并且没有结束。如果依赖者或者目标有一个是NULL_HANDLE则什么也不做
          */
         void markDependency(int dependent, int target) {
             if (dependent == NULL_HANDLE || target == NULL_HANDLE) {
@@ -3723,7 +3723,7 @@ public class ObjectInputStream
                         case STATUS_EXCEPTION:
                             // eagerly propagate exception急切传播的异常
                             markException(dependent,
-                                (ClassNotFoundException) entries[target]);//如果依赖是未知状态也需要检查是否它的依赖有异常状态
+                                (ClassNotFoundException) entries[target]);//如果依赖是未知状态也需将它们改为异常状态
                             break;
 
                         case STATUS_UNKNOWN:
@@ -3762,17 +3762,17 @@ public class ObjectInputStream
         void markException(int handle, ClassNotFoundException ex) {
             switch (status[handle]) {
                 case STATUS_UNKNOWN:
-                    status[handle] = STATUS_EXCEPTION;
-                    entries[handle] = ex;
+                    status[handle] = STATUS_EXCEPTION;//标记当前对象状态为异常
+                    entries[handle] = ex;//修改缓存中的对象为异常
 
-                    // propagate exception to dependents
+                    // propagate exception to dependents传播异常给依赖
                     HandleList dlist = deps[handle];
                     if (dlist != null) {
                         int ndeps = dlist.size();
                         for (int i = 0; i < ndeps; i++) {
-                            markException(dlist.get(i), ex);
+                            markException(dlist.get(i), ex);//递归传播依赖列表内的所有对象
                         }
-                        deps[handle] = null;
+                        deps[handle] = null;//清除依赖表中的对象，因为只要再有对象关联到相同类它必然是会从缓存中获取异常，不再需要依赖表项
                     }
                     break;
 
@@ -3793,14 +3793,14 @@ public class ObjectInputStream
         void finish(int handle) {
             int end;
             if (lowDep < 0) {
-                // no pending unknowns, only resolve current handle
+                // no pending unknowns, only resolve current handle没有还没处理的未知状态，只需要解决当前句柄
                 end = handle + 1;
             } else if (lowDep >= handle) {
-                // pending unknowns now clearable, resolve all upward handles
+                // pending unknowns now clearable, resolve all upward handles存在还没有处理的未知状态，但上层句柄都已经解决了
                 end = size;
                 lowDep = -1;
             } else {
-                // unresolved backrefs present, can't resolve anything yet
+                // unresolved backrefs present, can't resolve anything yet还有没有处理的向前引用，还不能解决所有对象
                 return;
             }
 

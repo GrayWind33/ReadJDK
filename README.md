@@ -46,3 +46,6 @@ JDK源码注释解析
 [Java PipedInputStream PipedOutputStream类源码解析](https://yq.aliyun.com/articles/637677)
 
 [Java序列化 ObjectOutputStream源码解析](https://yq.aliyun.com/articles/643797)
+
+[Java序列化 ObjectInputStream源码解析](https://yq.aliyun.com/articles/646150)
+
