@@ -551,7 +551,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
      */
     public boolean remove(Object o) {
         if (o == null) return false;
-        fullyLock();
+        fullyLock();//入队和出队都加锁
         try {
             for (Node<E> trail = head, p = trail.next;
                  p != null;
