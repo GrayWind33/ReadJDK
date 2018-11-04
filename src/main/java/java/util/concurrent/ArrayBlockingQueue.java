@@ -324,7 +324,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
     public boolean offer(E e) {
         checkNotNull(e);
         final ReentrantLock lock = this.lock;
-        lock.lock();//等待加锁
+        lock.lock();//非中断响应加锁
         try {
             if (count == items.length)
                 return false;
@@ -347,7 +347,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
     public void put(E e) throws InterruptedException {
         checkNotNull(e);
         final ReentrantLock lock = this.lock;
-        lock.lockInterruptibly();//抢占式锁
+        lock.lockInterruptibly();//中断响应式锁
         try {
             while (count == items.length)
                 notFull.await();
@@ -371,7 +371,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         checkNotNull(e);
         long nanos = unit.toNanos(timeout);
         final ReentrantLock lock = this.lock;
-        lock.lockInterruptibly();//抢占式加锁
+        lock.lockInterruptibly();//中断响应式加锁
         try {
             while (count == items.length) {
                 if (nanos <= 0)
@@ -387,7 +387,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
 
     public E poll() {
         final ReentrantLock lock = this.lock;
-        lock.lock();//等待加锁
+        lock.lock();//非中断响应加锁
         try {
             return (count == 0) ? null : dequeue();
         } finally {
@@ -397,7 +397,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
 
     public E take() throws InterruptedException {
         final ReentrantLock lock = this.lock;
-        lock.lockInterruptibly();//抢占加锁
+        lock.lockInterruptibly();//中断响应加锁
         try {
             while (count == 0)
                 notEmpty.await();//不限时等待
@@ -410,7 +410,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
     public E poll(long timeout, TimeUnit unit) throws InterruptedException {
         long nanos = unit.toNanos(timeout);
         final ReentrantLock lock = this.lock;
-        lock.lockInterruptibly();//抢占加锁
+        lock.lockInterruptibly();//中断响应加锁
         try {
             while (count == 0) {
                 if (nanos <= 0)
@@ -425,7 +425,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
 
     public E peek() {
         final ReentrantLock lock = this.lock;
-        lock.lock();//等待加锁
+        lock.lock();//非中断响应加锁
         try {
             return itemAt(takeIndex); // 队列为空时返回null
         } finally {
